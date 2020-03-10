@@ -1,17 +1,20 @@
 require_relative "../test_helper"
 require 'newrelic/elasticsearch'
 require 'newrelic/elasticsearch/operation_resolver'
-require 'webmock/minitest'
+require 'webmock'
 
 NewRelic::Agent.require_test_helper
 DependencyDetection.detect!
 
 class NewRelic::ElasticsearchTest < Minitest::Unit::TestCase
   def setup
-    stub_request(:any, /.*?localhost:9200.*/)
-    stub_request(:any, /.*?169.254.169.254.*/) # this is the AWS instance identity check - we don't care about this in test
-    stub_request(:any, /.*?metadata.google.internal.*/) # google cloud instance identity check
-    stub_request(:any, /.*?collector.newrelic.com.*/) # check in with new relic
+    # NewRelic agents in 6+ version is initializing in separate worker thread.
+    # Let's stub the requests before running tests
+    WebMock.enable!
+    WebMock.stub_request(:any, /.*?localhost:9200.*/)
+    WebMock.stub_request(:any, /.*?169.254.169.254.*/) # this is the AWS instance identity check - we don't care about this in test
+    WebMock.stub_request(:any, /.*?metadata.google.internal.*/) # google cloud instance identity check
+    WebMock.stub_request(:any, /.*?collector.newrelic.com.*/) # check in with new relic
     NewRelic::Agent.manual_start
     @client = Elasticsearch::Client.new(url: 'http://localhost:9200')
   end
@@ -25,6 +28,21 @@ class NewRelic::ElasticsearchTest < Minitest::Unit::TestCase
 
     assert_metrics_recorded('Datastore/operation/Elasticsearch/Search')
     assert_metrics_recorded('Datastore/statement/Elasticsearch/Test/Search')
+  end
+
+  def test_instruments_bulk
+    with_config(notice_nosql_statement: true) do
+      in_transaction do
+        @client.bulk(body: [
+        { index:  { _index: 'myindexA', _type: 'mytype', _id: '1', data: { title: 'Test' } } },
+        { update: { _index: 'myindexB', _type: 'mytype', _id: '2', data: { doc: { title: 'Update' } } } },
+        { delete: { _index: 'myindexC', _type: 'mytypeC', _id: '3' } },
+        { index:  { _index: 'myindexD', _type: 'mytype', _id: '1', data: { data: 'MYDATA' } } },
+      ])
+      end
+    end
+
+    assert_metrics_recorded('Datastore/operation/Elasticsearch/Bulk')
   end
 
   def test_instruments_update_with_scope

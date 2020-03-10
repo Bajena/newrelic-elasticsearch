@@ -1,5 +1,7 @@
 module NewRelic
   module Elasticsearch
-    VERSION = "0.3.1"
+    VERSION = File.read(
+      File.expand_path(File.join(File.dirname(__FILE__), "../../../VERSION"))
+    ).strip.freeze
   end
 end
