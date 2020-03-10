@@ -19,7 +19,12 @@ DependencyDetection.defer do
     NewRelic::Agent::MethodTracer.extend(NewRelic::Agent::MethodTracer)
 
     ::Elasticsearch::Transport::Client.class_eval do
-      @@old_version = instance_method(:perform_request).parameters.length == 4
+      # elasticsearch-ruby lower than 6.0.0 didn't have the fifth param - `headers`
+      self.class_variable_set(
+        :@@newrelic_elasticsearch_old_es_client_version,
+        instance_method(:perform_request).parameters.length == 4
+      )
+
       def perform_request_with_new_relic(method, path, params={}, body=nil, headers=nil)
         resolver = NewRelic::ElasticsearchOperationResolver.new(method, path)
 
@@ -32,7 +37,7 @@ DependencyDetection.defer do
         end
 
         NewRelic::Agent::Datastores.wrap('Elasticsearch', resolver.operation_name, resolver.index, callback) do
-          if @@old_version
+          if self.class.class_variable_get(:@@newrelic_elasticsearch_old_es_client_version)
             perform_request_without_new_relic(method, path, params, body)
           else
             perform_request_without_new_relic(method, path, params, body, headers)
