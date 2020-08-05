@@ -1,0 +1,42 @@
+version: v1.0
+name: Build pipeline
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+fail_fast:
+  stop:
+    when: branch != 'master'
+auto_cancel:
+  running:
+    when: branch != 'master'
+blocks:
+  - name: Build
+    dependencies: []
+    task:
+      secrets:
+        - name: DOCKER_COMMON
+        - name: BUNDLE_GITHUB
+        - name: GITHUB_LEADFEEDER_REPOS
+      prologue:
+        commands:
+          - sem-version ruby 2.6
+          # Allow pulling private gems from packages
+          - bundle config ${GITHUB_PACKAGES_URL} ${BUNDLE_GITHUB}
+          # Allow pulling private gems by github ssh
+          - chmod 0600 ~/.ssh/custom_id_rsa
+          - ssh-add ~/.ssh/custom_id_rsa
+          - checkout
+      jobs:
+        - name: Build
+          commands:
+            - cache restore
+            - bundle install --path vendor/bundle
+            - cache store
+            - bundle exec appraisal install
+            - bundle exec appraisal rake test
+promotions:
+  - name: release-gh-package
+    pipeline_file: github-package.yml
+    auto_promote:
+      when: branch = 'master' AND result = 'passed'
