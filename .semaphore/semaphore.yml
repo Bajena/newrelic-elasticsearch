@@ -30,9 +30,7 @@ blocks:
       jobs:
         - name: Build
           commands:
-            - cache restore
-            - bundle install --path vendor/bundle
-            - cache store
+            - bundle install
             - bundle exec appraisal install
             - bundle exec appraisal rake test
 promotions:
