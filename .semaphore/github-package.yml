@@ -1,0 +1,28 @@
+version: v1.0
+name: Deploy pipeline
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+fail_fast:
+  stop:
+    when: branch != 'master'
+auto_cancel:
+  running:
+    when: branch != 'master'
+blocks:
+  - name: Create package
+    task:
+      secrets:
+        - name: BUNDLE_GITHUB
+        - name: GITHUB_PACKAGES
+        - name: DOCKER_COMMON
+      prologue:
+        commands:
+          - 'git clone --quiet -b $LF_DOCKER_BRANCH https://$BUNDLE_GITHUB@$LF_DOCKER_REPO'
+          - checkout
+          - sem-version ruby 2.5
+      jobs:
+        - name: Deploy to Github Packages
+          commands:
+            - $HOME/leadfeeder-docker/bin/release_gem.sh
