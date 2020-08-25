@@ -10,7 +10,7 @@ GIT
 PATH
   remote: ..
   specs:
-    newrelic-elasticsearch (1.0.0)
+    newrelic-elasticsearch (1.0.1)
       elasticsearch
       newrelic_rpm
 

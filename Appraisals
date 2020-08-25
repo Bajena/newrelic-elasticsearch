@@ -12,3 +12,8 @@ appraise "es-7.5.0-and-rpm-6.9.0" do
   gem "elasticsearch", "7.5.0"
   gem "newrelic_rpm", "6.9.0.363"
 end
+
+appraise "es-7.4.0-and-rpm-6.6.0" do
+  gem "elasticsearch", "7.4.0"
+  gem "newrelic_rpm", "6.6.0.358"
+end
