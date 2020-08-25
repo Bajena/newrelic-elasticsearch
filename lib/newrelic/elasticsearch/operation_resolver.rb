@@ -45,9 +45,6 @@ class NewRelic::ElasticsearchOperationResolver
       [ "GET", "_flush" ] => "Flush",
       [ "POST", "_flush" ] => "Flush",
       [ "POST", "_gateway" ] => "GatewaySnapshot",
-      [ "GET", "_id" ] => "SearchScroll",
-      [ "DELETE", "_id" ] => "ClearScroll",
-      [ "POST", "_id" ] => "SearchScroll",
       [ "POST", "_mapping" ] => "PutMapping",
       [ "PUT", "_mapping" ] => "PutMapping",
       [ "GET", "_mapping" ] => "GetMapping",
@@ -79,7 +76,7 @@ class NewRelic::ElasticsearchOperationResolver
       [ "PUT", "_settings" ] => "UpdateSettings",
       [ "GET", "_settings" ] => "GetSettings",
       [ "GET", "_search_shards" ] => "ClusterSearchShards",
-      [ "POST", "_search__shards" ] => "ClusterSearchShards",
+      [ "POST", "_search_shards" ] => "ClusterSearchShards",
       [ "POST", "_shutdown" ] => "NodesShutdown",
       [ "HEAD", "_source" ] => "HeadSource",
       [ "GET", "_source" ] => "GetSource",
@@ -102,6 +99,9 @@ class NewRelic::ElasticsearchOperationResolver
       [ "PUT", "_warmer" ] => "PutWarmer",
       [ "DELETE", "_warmer" ] => "DeleteWarmer"
   }
+
+  KNOWN_ES_OPERATIONS =
+    ELASTICSEARCH_OPERATION_NAMES.map { |(_m, op), _v| op }.uniq.compact.freeze
 
   AMBIGUOUS_API_OPS = {
     0 => 'Server',
@@ -129,6 +129,7 @@ class NewRelic::ElasticsearchOperationResolver
 
   def operation_name
     resolved = ELASTICSEARCH_OPERATION_NAMES[[http_method, api_name]]
+
     case resolved
     when Symbol
       send(resolved)
@@ -181,7 +182,9 @@ class NewRelic::ElasticsearchOperationResolver
   end
 
   def op_index
-    @op_index ||= path_components.index { |c| c.start_with?('_') }
+    @op_index ||= path_components.index do |c|
+      c.start_with?('_') && KNOWN_ES_OPERATIONS.include?(c)
+    end
   end
 
   def ambiguous_put_resolver
@@ -215,11 +218,13 @@ class NewRelic::ElasticsearchOperationResolver
   end
 
   def ambiguous_search_resolver
+    return "SearchScroll" if operands.first.to_s == "scroll"
+
     "Search" + operands.first.to_s
   end
 
   def ambiguous_stats_resolver
-    "Indicies" + operands.map { |s| s.legalize }.join
+    "Indices" + operands.map { |s| s.legalize }.join
   end
 
   def ambiguous_cluster_resolver

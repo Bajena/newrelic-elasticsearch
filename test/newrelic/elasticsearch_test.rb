@@ -135,6 +135,28 @@ class NewRelic::ElasticsearchOperationResolverTest < Minitest::Unit::TestCase
     assert_equal(nil, resolver.index)
   end
 
+  def test_search_scroll_resolver
+    resolver = NewRelic::ElasticsearchOperationResolver.new('GET', '_search/scroll')
+    assert_equal('SearchScroll', resolver.operation_name)
+    assert_equal(nil, resolver.index)
+
+    resolver = NewRelic::ElasticsearchOperationResolver.new('GET', '_search/scroll/DXF1ZXJ5Q')
+    assert_equal('SearchScroll', resolver.operation_name)
+    assert_equal(nil, resolver.index)
+
+    resolver = NewRelic::ElasticsearchOperationResolver.new('POST', '_search/scroll')
+    assert_equal('SearchScroll', resolver.operation_name)
+    assert_equal(nil, resolver.index)
+
+    resolver = NewRelic::ElasticsearchOperationResolver.new('DELETE', '_search/scroll')
+    assert_equal('ClearScroll', resolver.operation_name)
+    assert_equal(nil, resolver.index)
+
+    resolver = NewRelic::ElasticsearchOperationResolver.new('DELETE', '_search/scroll/DXF1ZXJ5Q')
+    assert_equal('ClearScroll', resolver.operation_name)
+    assert_equal(nil, resolver.index)
+  end
+
   def test_ambiguousnodes_resolver
     resolver = NewRelic::ElasticsearchOperationResolver.new('GET', '_nodes/12/stats/indices')
     assert_equal('NodeStatsIndices', resolver.operation_name)
@@ -144,6 +166,14 @@ class NewRelic::ElasticsearchOperationResolverTest < Minitest::Unit::TestCase
     resolver = NewRelic::ElasticsearchOperationResolver.new('POST', 'test/_search')
     assert_equal('Search', resolver.operation_name)
     assert_equal('Test', resolver.index)
+
+    resolver = NewRelic::ElasticsearchOperationResolver.new('POST', 'test/_doc/_search')
+    assert_equal('Search', resolver.operation_name)
+    assert_equal('Test', resolver.index)
+
+    resolver = NewRelic::ElasticsearchOperationResolver.new('POST', 'test-2020-08-24,test-2020-08-25/_doc/_search')
+    assert_equal('Search', resolver.operation_name)
+    assert_equal('Test20200824,test20200825', resolver.index)
   end
 
   def test_ambiguous_cluster_resolver
