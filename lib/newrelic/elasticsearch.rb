@@ -26,7 +26,8 @@ DependencyDetection.defer do
       )
 
       def perform_request_with_new_relic(method, path, params={}, body=nil, headers=nil)
-        resolver = NewRelic::ElasticsearchOperationResolver.new(method, path)
+        resolver =
+          NewRelic::ElasticsearchOperationResolver.new(method, path, params)
 
         callback = proc do |result, metric, elapsed|
           statement = { body: body, params: params, headers: headers }

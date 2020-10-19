@@ -30,6 +30,21 @@ class NewRelic::ElasticsearchTest < Minitest::Unit::TestCase
     assert_metrics_recorded('Datastore/statement/Elasticsearch/Test/Search')
   end
 
+  def test_instruments_search_with_params
+    with_config(notice_nosql_statement: true) do
+      in_transaction do
+        @client.search(
+          index: 'test',
+          body: { query: { match_all: {}} },
+          routing: 123
+        )
+      end
+    end
+
+    assert_metrics_recorded('Datastore/operation/Elasticsearch/Search')
+    assert_metrics_recorded('Datastore/statement/Elasticsearch/Test/Search')
+  end
+
   def test_instruments_bulk
     with_config(notice_nosql_statement: true) do
       in_transaction do

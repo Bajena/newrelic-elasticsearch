@@ -118,13 +118,14 @@ class NewRelic::ElasticsearchOperationResolver
     "aliases" => "Aliases"
   }
 
-  attr_accessor :http_method, :path
+  attr_accessor :http_method, :path, :params
 
   using Inflector
 
-  def initialize(http_method, path)
+  def initialize(http_method, path, params = {})
     @http_method = http_method
     @path = path
+    @params = params
   end
 
   def operation_name
